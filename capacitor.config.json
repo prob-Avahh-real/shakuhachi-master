@@ -1,0 +1,8 @@
+{
+  "appId": "com.shakuhachi.master",
+  "appName": "尺八高手",
+  "webDir": "www",
+  "ios": { "contentInset": "automatic" },
+  "android": { "allowMixedContent": true },
+  "plugins": { "StatusBar": { "style": "DARK", "backgroundColor": "#0a0a08" } }
+}

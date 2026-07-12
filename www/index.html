@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>尺八高手 · Shakuhachi Master</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a08;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;
+  font-family:"PingFang SC","Microsoft YaHei",sans-serif}
+canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%}
+#hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;
+  padding:10px 14px;pointer-events:none;z-index:10}
+#score-area{text-align:left}#score-label{font-size:10px;color:#7a9a60;letter-spacing:2px}
+#score-value{font-size:26px;font-weight:900;color:#b0c890;text-shadow:0 0 10px rgba(160,200,120,.3)}
+#combo-value{font-size:30px;font-weight:900;color:#60a040;text-shadow:0 0 14px rgba(96,160,64,.4)}
+#combo-label{font-size:10px;color:#609040}
+#acc-area{text-align:right}#acc-value{font-size:18px;font-weight:700;color:#a0b880}
+#acc-label{font-size:10px;color:#708060}
+#judgment{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);font-size:44px;
+  font-weight:900;pointer-events:none;z-index:20;opacity:0;text-shadow:0 0 20px currentColor}
+.j-perfect{color:#ffd700;animation:jPop .6s ease-out forwards}.j-good{color:#90c040;animation:jPop .6s ease-out forwards}
+.j-miss{color:#606060;animation:jPop .6s ease-out forwards}
+@keyframes jPop{0%{opacity:1;transform:translate(-50%,-50%) scale(1.3)}100%{opacity:0;transform:translate(-50%,-80%) scale(1)}}
+#start-screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;z-index:30;background:rgba(8,10,6,.95);color:#b0c890}
+#start-screen h1{font-size:clamp(28px,8vw,58px);font-weight:900;
+  background:linear-gradient(180deg,#a0c870,#508030,#a0c870);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;letter-spacing:4px}
+#start-screen .sub{color:#708060;font-size:13px;margin-bottom:20px;letter-spacing:2px}
+.key-hint{display:flex;gap:12px;margin-bottom:20px}
+.kb{background:#10140c;border:2px solid #2a3a18;border-radius:10px;padding:10px 16px;text-align:center}
+.kb .k{font-size:22px;font-weight:900;color:#a0c870;display:block}
+.kb .l{font-size:10px;color:#708060;margin-top:3px}
+#song-list{display:flex;flex-direction:column;gap:8px;width:100%;max-width:360px;margin-bottom:12px}
+.sb{width:100%;background:#10140c;border:2px solid #2a3a18;border-radius:14px;padding:12px 16px;
+  color:#a0c870;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center}
+.sb:active{border-color:#80a050;background:#181c10;transform:scale(.98)}
+.sb .sl{display:flex;flex-direction:column;gap:2px}.sb .st{font-size:15px;font-weight:700}.sb .ss{font-size:11px;color:#708060}
+.sb .sr{display:flex;align-items:center;gap:8px}.sb .sd{font-size:15px}.sb .sa{font-size:16px;color:#80a050}
+#start-screen .th{color:#607050;font-size:11px;margin-top:10px}
+#result-screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
+  justify-content:center;z-index:30;background:rgba(8,10,6,.96)}#result-screen.show{display:flex}
+#result-screen h2{font-size:32px;font-weight:900;color:#a0c870;margin-bottom:6px}
+#result-screen .grade{font-size:64px;margin:6px 0}
+#rs{display:flex;gap:28px;margin:12px 0}.si{text-align:center}.sv{font-size:26px;font-weight:900;color:#b0c890}
+.slbl{font-size:10px;color:#708060}
+#result-screen button{background:linear-gradient(180deg,#80a050,#406020);border:none;color:#e0f0d0;
+  font-size:16px;font-weight:700;padding:10px 36px;border-radius:28px;cursor:pointer;margin-top:12px}
+#voice-bar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(16,28,12,.9);
+  border:1px solid #60a04055;border-radius:18px;padding:5px 14px;color:#80c060;font-size:10px;z-index:50;display:none;align-items:center;gap:5px}
+#voice-bar .vd{width:5px;height:5px;border-radius:50%;background:#80c060;animation:pulse 1.2s ease infinite}
+#voice-bar.show{display:flex}@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:40;
+  background:#0a0a08;color:#708060;font-size:16px}
+@media(max-width:400px) and (max-height:320px),(max-width:320px) and (max-height:400px){
+  html{font-size:12px}#hud{padding:3px 6px}#score-value{font-size:16px}#combo-value{font-size:18px}
+  #acc-value{font-size:12px}#judgment{font-size:26px;top:25%}#start-screen h1{font-size:18px}
+  #start-screen .sub{font-size:9px;margin-bottom:8px}.key-hint{display:none}
+  .sb{padding:6px 10px;border-radius:8px}.sb .st{font-size:12px}.sb .ss{font-size:8px}
+  #result-screen h2{font-size:20px}#result-screen .grade{font-size:36px;margin:2px 0}
+  #rs{gap:10px}.sv{font-size:16px}.slbl{font-size:7px}
+}
+</style>
+</head>
+<body>
+<div id="loading">🎋 尺八调音中...</div>
+<div id="start-screen" style="display:none">
+  <h1>尺八高手</h1>
+  <p class="sub">—— 竹笛爵士节奏游戏 ——</p>
+  <div class="key-hint"><div class="kb"><span class="k">1</span><span class="l">レ</span></div><div class="kb"><span class="k">2</span><span class="l">ファ</span></div><div class="kb"><span class="k">3</span><span class="l">ソ</span></div><div class="kb"><span class="k">4</span><span class="l">ラ</span></div><div class="kb"><span class="k">5</span><span class="l">ド</span></div></div>
+  <div id="song-list"></div>
+  <p class="th">📱 手机：5指触摸对应5音 | 👓 眼镜：说音名击打</p>
+</div>
+<div id="hud" style="display:none">
+  <div id="score-area"><div id="score-label">得 点</div><div id="score-value">0</div></div>
+  <div><div id="combo-value" style="opacity:0">0</div><div id="combo-label">COMBO</div></div>
+  <div id="acc-area"><div id="acc-label">精度</div><div id="acc-value">--%</div></div>
+</div>
+<div id="judgment"></div>
+<div id="voice-bar"><span class="vd"></span> 语音激活 · 说音名击打</div>
+<div id="result-screen"><h2>演奏终了</h2><div class="grade" id="rg"></div><div id="rs"></div><button onclick="restartGame()">再来一曲</button></div>
+<canvas id="game"></canvas>
+<script>
+// ==================== SHAKUHACHI SYNTHESIS ====================
+let audioCtx;
+function initAudio(){if(audioCtx)return;audioCtx=new(window.AudioContext||window.webkitAudioContext)();document.getElementById("loading").style.display="none";document.getElementById("start-screen").style.display="flex"}
+
+// Shakuhachi pitches (miyako-bushi scale: D F G A C)
+const PITCHES = [
+  {name:"レ",hz:293.66,id:"re"},   // D4
+  {name:"ファ",hz:349.23,id:"fa"}, // F4
+  {name:"ソ",hz:392.00,id:"so"},   // G4
+  {name:"ラ",hz:440.00,id:"ra"},   // A4
+  {name:"ド",hz:523.25,id:"do"},   // C5
+];
+
+function playShakuhachi(pitchIdx,time){
+  if(!audioCtx)return;const t=time||audioCtx.currentTime;const p=PITCHES[pitchIdx];
+  const dur=0.8;const master=audioCtx.createGain();master.connect(audioCtx.destination);
+  master.gain.setValueAtTime(0.5,t);master.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  // Breath noise — hallmark of shakuhachi
+  const bufLen=audioCtx.sampleRate*dur;const nb=audioCtx.createBuffer(1,bufLen,audioCtx.sampleRate);
+  const nd=nb.getChannelData(0);for(let i=0;i<bufLen;i++)nd[i]=(Math.random()*2-1)*Math.exp(-i/(audioCtx.sampleRate*0.08));
+  const noise=audioCtx.createBufferSource();noise.buffer=nb;
+  const ng=audioCtx.createGain();ng.gain.setValueAtTime(0.12,t);ng.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  const bp=audioCtx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=p.hz*2.5;bp.Q.value=0.8;
+  noise.connect(bp);bp.connect(ng);ng.connect(master);noise.start(t);
+  // Fundamental + odd harmonics (shakuhachi hollow timbre)
+  [1,3,5].forEach((h,i)=>{
+    const osc=audioCtx.createOscillator();const g=audioCtx.createGain();
+    osc.type="sine";osc.frequency.setValueAtTime(p.hz*h,t);
+    // Slight pitch scoop (meri technique)
+    if(h===1){osc.frequency.setValueAtTime(p.hz*0.92,t);osc.frequency.exponentialRampToValueAtTime(p.hz,t+0.04)}
+    const vol=[0.4,0.18,0.06][i];
+    g.gain.setValueAtTime(vol,t);g.gain.setValueAtTime(vol,t+0.12);
+    // Subtle vibrato on fundamental
+    if(h===1){osc.frequency.setValueAtTime(p.hz,t+0.08);
+      const lfo=audioCtx.createOscillator();const lfog=audioCtx.createGain();
+      lfo.type="sine";lfo.frequency.value=5.5;lfog.gain.value=4;
+      lfo.connect(lfog);lfog.connect(osc.frequency);lfo.start(t+0.12);lfo.stop(t+dur)}
+    g.gain.exponentialRampToValueAtTime(0.001,t+dur*0.9);
+    osc.connect(g);g.connect(master);osc.start(t);osc.stop(t+dur)
+  });
+}
+
+// ==================== RHYTHM ENGINE ====================
+class RhythmEngine{
+  constructor(cb={}){this._song=null;this._notes=[];this._ni=0;this._score=0;this._combo=0;
+    this._mc=0;this._p=0;this._g=0;this._m=0;this._state="idle";this._st=0;this._elapsed=0;
+    this._po=0;this._ps=0;this._tid=null;this.perfectWindow=65;this.goodWindow=150;this._cb=cb}
+  get state(){return this._state}get song(){return this._song}get notes(){return this._notes}
+  get noteIndex(){return this._ni}get score(){return this._score}get combo(){return this._combo}
+  get maxCombo(){return this._mc}get perfects(){return this._p}get goods(){return this._g}
+  get misses(){return this._m}get elapsed(){return this._elapsed}get isPlaying(){return this._state==="playing"}
+  get isFinished(){return this._state==="ended"}
+  get totalNotes(){return this._notes.filter(n=>n.time<=(this._song?this._song.duration:0)).length}
+  get accuracy(){const t=this.totalNotes;return t>0?(this._p+this._g*.5)/t:0}
+  load(sd){this._song=sd;this._notes=sd.notes.map(n=>({...n,judged:false,played:false})).sort((a,b)=>a.t-b.t);this.reset()}
+  start(cd=2){if(!this._song||this._state==="playing")return;this.reset();this._st=performance.now()/1000+cd;
+    this._state="playing";this._emit("start");this._tick(performance.now())}
+  reset(){this._stop();this._score=0;this._combo=0;this._mc=0;this._p=0;this._g=0;this._m=0;
+    this._ni=0;this._elapsed=0;this._po=0;this._ps=0;this._notes.forEach(n=>{n.judged=false;n.played=false})}
+  stop(){this._stop();this._state="idle";this._emit("stop")}
+  pause(){if(this._state!=="playing")return;this._state="paused";this._ps=performance.now()/1000;this._stop();this._emit("pause")}
+  resume(){if(this._state!=="paused")return;this._po+=performance.now()/1000-this._ps;this._state="playing";this._emit("resume");this._tick(performance.now())}
+  _stop(){if(this._tid){cancelAnimationFrame(this._tid);this._tid=null}}
+  _tick(now){if(this._state!=="playing")return;this._elapsed=now/1000-this._st-this._po;if(this._elapsed<0)this._elapsed=0;
+    while(this._ni<this._notes.length&&this._notes[this._ni].time<=this._elapsed){const n=this._notes[this._ni];
+      if(!n.judged){n.judged=true;this._m++;this._combo=0;this._emit("miss",{note:n});this._emit("comboChange");
+        if(!n.played){n.played=true;this._emit("playNote",n)}}
+      this._ni++}
+    if(this._elapsed>this._song.duration+1){this._finish();return}
+    this._emit("tick");this._tid=requestAnimationFrame(t=>this._tick(t))}
+  _finish(){this._stop();this._state="ended";for(const n of this._notes){if(!n.judged&&n.time<=this._song.duration){n.judged=true;this._m++}}
+    this._emit("complete",{score:this._score,combo:this._mc,perfects:this._p,goods:this._g,misses:this._m,accuracy:this.accuracy})}
+  hit(pidx){if(this._state!=="playing")return null;let bn=null,bd=Infinity;
+    for(let i=this._ni;i<Math.min(this._ni+12,this._notes.length);i++){const n=this._notes[i];if(n.judged||n.pitch!==pidx)continue;
+      const d=Math.abs(n.time-this._elapsed)*1000;if(d<bd&&d<this.goodWindow+40){bd=d;bn=n}}
+    if(!bn){this._combo=0;this._emit("comboChange");return{result:"whiff"}}
+    bn.judged=true;const d=Math.abs(bn.time-this._elapsed)*1000;let r;
+    if(d<=this.perfectWindow){this._score+=300+Math.floor(this._combo*.5);this._combo++;this._p++;r="perfect"}
+    else if(d<=this.goodWindow){this._score+=150+Math.floor(this._combo*.3);this._combo++;this._g++;r="good"}
+    else{this._combo=0;this._m++;r="miss"}
+    if(this._combo>this._mc)this._mc=this._combo;
+    if(!bn.played){bn.played=true;this._emit("playNote",bn)}
+    this._emit("judgment",{result:r,note:bn,combo:this._combo});this._emit("comboChange");return{result:r}}
+  getVisibleNotes(lb=.2,la=5){const s=this._elapsed-lb,e=this._elapsed+la;const v=[];
+    for(let i=Math.max(0,this._ni-4);i<this._notes.length;i++){const n=this._notes[i];if(n.time<s)continue;if(n.time>e)break;v.push(n)}return v}
+  _emit(e,d){if(this._cb[e])this._cb[e](d)}
+}
+
+// ==================== JAZZ SONGS ====================
+function js(title,bpm,notes,dur){return{title,bpm,notes,duration:dur}}
+function n(t,p){return{t,type:"note",pitch:p}}
+
+const SONGS=[
+  js("Autumn Leaves",128,[
+    n(0,0),n(1,3),n(2,2),n(3,0),n(4,1),n(5,0),n(6,4),n(7,2),
+    n(8,0),n(9,3),n(10,2),n(11,0),n(12,1),n(13,0),n(14,3),n(15,2),
+    n(16,0),n(17,3),n(18,2),n(19,1),n(20,0),n(21,4),n(22,3),n(23,2),
+    n(24,0),n(24.5,1),n(25,2),n(25.5,3),n(26,4),n(27,3),n(28,2),n(29,0),
+    n(30,0),n(31,3),n(32,2),n(33,0),n(34,1),n(35,0),n(36,4),n(37,2),
+    n(38,0),n(38.5,3),n(39,2),n(39.5,1),n(40,0),n(40.5,4),n(41,3),n(41.5,2),
+    n(42,0),n(43,1),n(44,2),n(45,3),n(46,4),n(47,3),n(48,0),
+  ],50),
+  js("Take Five",152,[
+    n(0,0),n(0.5,1),n(1,2),n(1.5,3),n(2,4),n(2.5,3),n(3,2),n(3.5,1),
+    n(4,0),n(4.5,1),n(5,2),n(5.5,3),n(6,4),n(6.5,3),n(7,1),n(7.5,0),
+    n(8,2),n(8.5,3),n(9,4),n(9.5,3),n(10,2),n(10.5,1),n(11,0),n(11.5,2),
+    n(12,4),n(12.5,3),n(13,2),n(13.5,1),n(14,0),n(14.5,2),n(15,3),n(15.5,4),
+    n(16,0),n(16.5,1),n(17,2),n(17.5,3),n(18,4),n(18.5,3),n(19,2),n(19.5,1),
+    n(20,0),n(21,2),n(22,4),n(23,3),n(24,1),n(25,0),n(26,2),n(27,3),n(28,4),
+    n(29,3),n(29.5,2),n(30,1),n(30.5,0),n(31,2),n(31.5,3),n(32,0),
+  ],35),
+  js("Summertime",108,[
+    n(0,0),n(2,1),n(4,2),n(6,0),n(8,3),n(10,2),n(12,1),n(14,0),
+    n(16,0),n(18,1),n(20,2),n(22,0),n(24,4),n(26,3),n(28,2),n(30,0),
+    n(32,2),n(33,1),n(34,0),n(36,3),n(38,2),n(40,1),n(42,0),n(44,4),
+    n(46,3),n(48,2),n(50,0),n(52,1),n(54,3),n(55,2),n(56,0),
+  ],60),
+  js("Fly Me to the Moon",120,[
+    n(0,0),n(1,2),n(2,3),n(3,4),n(4,3),n(5,2),n(6,0),n(7,1),
+    n(8,0),n(9,2),n(10,3),n(11,4),n(12,3),n(13,2),n(14,1),n(15,0),
+    n(16,2),n(17,3),n(18,4),n(19,3),n(20,2),n(21,0),n(22,1),n(23,2),
+    n(24,0),n(25,2),n(26,3),n(27,4),n(28,3),n(29,2),n(30,0),n(31,1),
+    n(32,0),n(33,2),n(34,3),n(35,4),n(36,3),n(37,2),n(38,0),n(39,0),
+  ],42),
+  js("My Favorite Things",144,[
+    n(0,0),n(0.5,1),n(1,2),n(1.5,3),n(2,4),n(2.5,3),n(3,2),n(3.5,1),
+    n(4,0),n(5,2),n(6,3),n(7,4),n(8,3),n(9,2),n(10,0),n(11,1),
+    n(12,0),n(12.5,1),n(13,2),n(13.5,3),n(14,4),n(14.5,3),n(15,2),
+    n(16,0),n(16.5,2),n(17,3),n(17.5,4),n(18,3),n(18.5,2),n(19,1),
+    n(20,0),n(20.5,1),n(21,2),n(21.5,3),n(22,4),n(23,3),n(24,0),
+  ],26),
+  js("Blue Bossa",135,[
+    n(0,0),n(0.5,1),n(1,2),n(2,0),n(3,3),n(4,2),n(5,1),n(6,0),
+    n(7,1),n(8,2),n(9,0),n(10,3),n(11,2),n(12,1),n(13,0),n(14,4),
+    n(15,3),n(16,2),n(17,0),n(18,3),n(19,2),n(20,1),n(21,0),n(22,3),
+    n(23,2),n(24,0),n(25,1),n(26,2),n(27,0),n(28,3),n(29,2),n(30,0),
+  ],34),
+  js("So What",132,[
+    n(0,0),n(1,2),n(2,4),n(3,2),n(4,0),n(5,2),n(6,4),n(7,2),
+    n(8,1),n(9,3),n(10,0),n(11,3),n(12,1),n(13,3),n(14,0),n(15,3),
+    n(16,0),n(17,2),n(18,4),n(19,2),n(20,0),n(21,2),n(22,4),n(23,2),
+    n(24,1),n(24.5,3),n(25,0),n(25.5,3),n(26,1),n(26.5,3),n(27,0),
+    n(28,0),n(28.5,2),n(29,4),n(29.5,2),n(30,0),n(30.5,2),n(31,4),
+  ],34),
+  js("Wave",128,[
+    n(0,0),n(2,2),n(4,3),n(6,4),n(8,3),n(10,2),n(12,0),n(14,1),
+    n(16,0),n(18,2),n(20,3),n(22,4),n(24,3),n(26,2),n(28,0),n(30,1),
+    n(32,2),n(33,3),n(34,4),n(35,3),n(36,2),n(38,0),n(40,2),n(42,4),
+    n(44,3),n(45,2),n(46,0),n(48,4),n(50,3),n(52,0),
+  ],56),
+  js("Girl from Ipanema",130,[
+    n(0,0),n(1,2),n(2,3),n(3,4),n(4,3),n(5,2),n(6,0),n(7,1),
+    n(8,0),n(9,2),n(10,3),n(11,4),n(12,3),n(13,2),n(14,0),n(15,1),
+    n(16,2),n(17,3),n(18,4),n(19,3),n(20,2),n(21,0),n(22,1),n(23,2),
+    n(24,1),n(25,3),n(26,0),n(27,2),n(28,4),n(29,3),n(30,0),n(31,1),
+    n(32,0),n(33,2),n(34,3),n(35,4),n(36,3),n(37,2),n(38,0),
+  ],42),
+  js("Cantaloupe Island",116,[
+    n(0,0),n(0.5,1),n(1,2),n(2,0),n(3,3),n(3.5,2),n(4,1),n(5,0),
+    n(6,0),n(6.5,1),n(7,2),n(8,0),n(9,3),n(9.5,2),n(10,1),n(11,0),
+    n(12,2),n(12.5,3),n(13,4),n(14,3),n(15,2),n(15.5,1),n(16,0),
+    n(17,0),n(17.5,1),n(18,2),n(19,0),n(20,3),n(20.5,4),n(21,3),
+    n(22,2),n(22.5,1),n(23,0),n(24,0),n(24.5,1),n(25,2),n(26,0),
+  ],30),
+  js("In a Sentimental Mood",112,[
+    n(0,0),n(2,1),n(4,2),n(6,0),n(8,3),n(10,2),n(12,1),n(14,0),
+    n(16,0),n(18,1),n(20,2),n(22,3),n(24,4),n(26,3),n(28,2),n(30,0),
+    n(32,1),n(33,2),n(34,3),n(36,4),n(38,3),n(40,2),n(42,0),n(44,1),
+    n(46,0),n(48,2),n(50,3),n(52,4),n(54,3),n(56,0),
+  ],60),
+  js("All of Me",128,[
+    n(0,0),n(1,2),n(2,3),n(3,4),n(4,3),n(5,2),n(6,0),n(7,1),
+    n(8,0),n(9,2),n(10,3),n(11,4),n(12,3),n(13,2),n(14,0),n(15,1),
+    n(16,2),n(17,3),n(18,4),n(19,3),n(20,2),n(21,0),n(22,1),n(23,2),
+    n(24,0),n(24.5,2),n(25,3),n(25.5,4),n(26,3),n(27,2),n(28,0),n(29,1),
+    n(30,0),n(31,2),n(32,3),n(33,4),n(34,3),n(35,2),n(36,0),
+  ],40),
+  js("Misty",110,[
+    n(0,0),n(2,2),n(4,3),n(6,4),n(8,3),n(10,2),n(12,0),n(14,1),
+    n(16,0),n(18,2),n(20,3),n(22,4),n(24,3),n(26,2),n(28,1),n(30,0),
+    n(32,2),n(34,3),n(36,4),n(38,3),n(40,2),n(42,0),n(44,1),n(46,2),
+    n(48,0),n(50,2),n(52,3),n(54,4),n(56,3),n(58,0),
+  ],62),
+  js("Round Midnight",108,[
+    n(0,0),n(1,1),n(2,2),n(3,3),n(4,4),n(5,3),n(6,2),n(7,1),
+    n(8,0),n(9,2),n(10,4),n(11,3),n(12,1),n(13,0),n(14,2),n(15,3),
+    n(16,4),n(17,3),n(18,2),n(19,0),n(20,1),n(21,2),n(22,3),n(23,4),
+    n(24,0),n(25,2),n(26,4),n(27,3),n(28,1),n(29,0),n(30,3),n(31,2),
+    n(32,0),n(33,1),n(34,2),n(35,3),n(36,4),n(37,3),n(38,0),
+  ],42),
+  js("Stella by Starlight",120,[
+    n(0,0),n(1,2),n(2,3),n(3,4),n(4,3),n(5,2),n(6,0),n(7,1),
+    n(8,2),n(9,3),n(10,4),n(11,3),n(12,2),n(13,1),n(14,0),n(15,2),
+    n(16,0),n(16.5,1),n(17,2),n(17.5,3),n(18,4),n(19,3),n(20,2),n(21,0),
+    n(22,1),n(23,2),n(24,0),n(25,3),n(26,4),n(27,3),n(28,2),n(29,0),
+    n(30,0),n(31,2),n(32,3),n(33,4),n(34,3),n(35,2),n(36,0),
+  ],40),
+  js("Night and Day",138,[
+    n(0,0),n(0.5,1),n(1,2),n(1.5,3),n(2,4),n(2.5,3),n(3,2),n(3.5,1),
+    n(4,0),n(5,2),n(6,3),n(7,4),n(8,3),n(9,2),n(10,0),n(11,1),
+    n(12,2),n(12.5,3),n(13,4),n(13.5,3),n(14,2),n(14.5,1),n(15,0),
+    n(16,0),n(16.5,1),n(17,2),n(17.5,3),n(18,4),n(19,3),n(20,2),n(21,0),
+    n(22,0),n(23,2),n(24,3),n(25,4),n(26,3),n(27,2),n(28,0),
+  ],32),
+  js("Caravan",156,[
+    n(0,0),n(0.5,2),n(1,4),n(1.5,2),n(2,0),n(2.5,2),n(3,4),n(3.5,3),
+    n(4,2),n(4.5,1),n(5,0),n(5.5,2),n(6,3),n(6.5,4),n(7,3),n(7.5,2),
+    n(8,0),n(9,1),n(10,2),n(11,3),n(12,4),n(13,3),n(14,2),n(15,0),
+    n(16,0),n(16.5,2),n(17,4),n(17.5,2),n(18,0),n(18.5,2),n(19,4),n(19.5,3),
+    n(20,2),n(20.5,1),n(21,0),n(21.5,2),n(22,3),n(22.5,4),n(23,3),n(23.5,2),
+    n(24,0),n(24.5,2),n(25,4),n(25.5,3),n(26,1),n(26.5,0),n(27,2),n(27.5,3),
+    n(28,0),n(28.5,2),n(29,4),n(29.5,2),n(30,0),
+  ],34),
+  js("Donna Lee",168,[
+    n(0,0),n(0.25,1),n(0.5,2),n(0.75,3),n(1,4),n(1.25,3),n(1.5,2),
+    n(2,0),n(2.25,1),n(2.5,2),n(2.75,3),n(3,4),n(3.25,3),n(3.5,2),
+    n(4,0),n(4.5,2),n(5,3),n(5.5,4),n(6,3),n(6.5,2),n(7,0),n(7.5,1),
+    n(8,0),n(8.25,1),n(8.5,2),n(8.75,3),n(9,4),n(9.25,3),n(9.5,2),
+    n(10,0),n(10.5,2),n(11,3),n(11.5,4),n(12,3),n(12.5,2),n(13,1),
+    n(14,0),n(14.5,2),n(15,3),n(15.5,4),n(16,0),
+  ],18),
+  js("Body and Soul",106,[
+    n(0,0),n(2,1),n(4,2),n(6,3),n(8,4),n(10,3),n(12,2),n(14,0),
+    n(16,1),n(18,2),n(20,3),n(22,4),n(24,3),n(26,2),n(28,0),n(30,1),
+    n(32,0),n(34,2),n(36,3),n(38,4),n(40,3),n(42,2),n(44,0),n(46,1),
+    n(48,2),n(50,3),n(52,4),n(54,3),n(56,2),n(58,0),n(60,0),
+  ],64),
+  js("Giant Steps",184,[
+    n(0,0),n(0.5,2),n(1,4),n(1.5,3),n(2,0),n(2.5,2),n(3,4),n(3.5,1),
+    n(4,0),n(4.5,2),n(5,4),n(5.5,3),n(6,0),n(6.5,2),n(7,4),n(7.5,0),
+    n(8,0),n(8.25,2),n(8.5,4),n(8.75,3),n(9,0),n(9.25,2),n(9.5,4),n(9.75,1),
+    n(10,0),n(10.25,2),n(10.5,4),n(10.75,3),n(11,0),n(11.25,2),n(11.5,4),
+    n(12,0),n(12.5,2),n(13,4),n(13.5,3),n(14,0),n(14.5,2),n(15,4),
+    n(16,0),n(16.5,2),n(17,4),n(17.5,1),n(18,0),n(18.5,2),n(19,4),n(19.5,3),
+    n(20,0),n(20.25,2),n(20.5,4),n(20.75,3),n(21,0),n(21.25,2),n(21.5,4),n(21.75,1),
+    n(22,0),n(22.25,2),n(22.5,4),n(22.75,3),n(23,0),n(23.25,2),n(23.5,4),n(23.75,0),
+    n(24,0),n(24.5,2),n(25,4),n(25.5,3),n(26,0),n(26.5,2),n(27,4),n(27.5,2),
+    n(28,0),n(28.25,2),n(28.5,4),n(28.75,3),n(29,0),n(29.25,2),n(29.5,4),
+  ],32),
+js("Satin Doll",120,[n(0,2),n(2,2),n(4,2),n(5,3),n(6,2),n(7,1),n(8,0),n(9,1),n(10,2),n(11,3),n(12,2),n(13,4),n(14,3),n(16,2),n(18,3),n(19,2),n(20,1),n(21,0),n(22,1),n(24,2),n(26,3),n(28,4),n(30,3),n(32,2),n(34,1),n(35,0),n(36,1),n(38,2),n(40,1),n(42,0)],22),
+js("St. Thomas",132,[n(0,2),n(1,3),n(2,4),n(3,3),n(4,2),n(5,1),n(6,0),n(7,1),n(8,2),n(9,3),n(10,2),n(11,1),n(12,0),n(14,2),n(16,3),n(17,4),n(18,3),n(19,2),n(20,3),n(21,4),n(22,3),n(23,2),n(24,1),n(25,0),n(26,1),n(28,2),n(30,3),n(32,4),n(34,3),n(36,2),n(38,1),n(40,0),n(42,2),n(44,3),n(45,4),n(46,3),n(47,2),n(48,1),n(49,0)],23),
+js("Watermelon Man",125,[n(0,1),n(2,1),n(4,1),n(5,2),n(6,1),n(7,3),n(8,1),n(10,1),n(12,1),n(13,2),n(14,1),n(15,3),n(16,1),n(18,0),n(20,2),n(22,3),n(23,2),n(24,1),n(26,1),n(28,0),n(30,1),n(32,1),n(33,2),n(34,1),n(35,3),n(36,1),n(38,0),n(40,2),n(42,3),n(43,2),n(44,1),n(46,0),n(48,1),n(50,0),n(52,1)],26),
+js("Song for My Father",128,[n(0,0),n(2,1),n(4,2),n(6,1),n(8,0),n(10,1),n(12,2),n(14,3),n(16,2),n(18,1),n(20,0),n(22,1),n(24,2),n(26,3),n(28,4),n(30,3),n(32,2),n(34,1),n(36,0),n(38,1),n(40,2),n(42,3),n(44,2),n(46,1),n(48,0),n(50,1),n(52,2),n(54,3),n(56,2),n(58,1),n(60,0)],29),
+js("Round About Midnight",108,[n(0,2),n(3,1),n(4,0),n(6,1),n(7,2),n(9,3),n(10,4),n(12,3),n(14,2),n(16,1),n(18,2),n(20,3),n(22,1),n(24,0),n(27,2),n(30,1),n(32,0),n(34,1),n(36,2),n(38,3),n(40,4),n(42,3),n(44,2),n(46,1),n(48,0),n(51,2),n(54,1),n(56,0),n(58,1),n(60,2)],34),
+js("Straight No Chaser",140,[n(0,2),n(1,2),n(2,2),n(3,2),n(4,3),n(5,3),n(6,3),n(7,4),n(8,4),n(9,2),n(10,2),n(11,2),n(12,2),n(14,1),n(15,1),n(16,0),n(18,2),n(19,2),n(20,2),n(21,2),n(22,3),n(23,3),n(24,3),n(25,4),n(26,4),n(27,2),n(28,2),n(29,2),n(30,2),n(32,1),n(33,1),n(34,0),n(36,2),n(38,3),n(40,4),n(42,2),n(44,1),n(46,0),n(48,2),n(52,0)],23),
+js("Someday My Prince Will Come",112,[n(0,2),n(2,3),n(4,4),n(6,3),n(8,2),n(10,1),n(12,0),n(14,1),n(16,2),n(18,3),n(20,4),n(22,3),n(24,2),n(26,1),n(28,0),n(30,2),n(32,3),n(34,4),n(36,3),n(38,2),n(40,1),n(42,0),n(44,1),n(46,2),n(48,3),n(50,2),n(52,1),n(54,0),n(56,1),n(58,2)],32),
+js("Well You Needn't",148,[n(0,2),n(1,2),n(2,3),n(3,2),n(4,4),n(5,3),n(6,2),n(7,1),n(8,0),n(9,1),n(10,2),n(11,3),n(12,4),n(14,2),n(15,2),n(16,3),n(17,2),n(18,4),n(19,3),n(20,2),n(21,1),n(22,0),n(24,2),n(25,3),n(26,4),n(28,2),n(29,1),n(30,0),n(32,2),n(34,3),n(36,4),n(38,2),n(40,0),n(42,2),n(44,3),n(46,4),n(48,2),n(50,1),n(52,0),n(56,0)],23),
+js("Solar",135,[n(0,1),n(2,2),n(4,3),n(6,2),n(8,1),n(10,0),n(12,1),n(14,2),n(16,3),n(18,4),n(20,3),n(22,2),n(24,1),n(26,0),n(28,1),n(30,2),n(32,3),n(34,4),n(36,3),n(38,2),n(40,1),n(42,0),n(44,1),n(46,2),n(48,3),n(50,2),n(52,1),n(54,0),n(56,1),n(58,2)],27),
+js("The Girl from Ipanema",130,[n(0,2),n(1,3),n(2,4),n(3,4),n(4,4),n(5,3),n(6,2),n(7,1),n(8,0),n(10,2),n(11,3),n(12,4),n(13,4),n(14,4),n(15,3),n(16,2),n(17,1),n(18,0),n(20,1),n(22,2),n(24,3),n(26,2),n(28,1),n(30,0),n(32,2),n(34,3),n(36,4),n(38,3),n(40,2),n(42,1),n(44,0),n(46,1),n(48,2)],23),
+js("Scrapple from the Apple",162,[n(0,2),n(0.5,3),n(1,4),n(1.5,3),n(2,2),n(3,1),n(4,0),n(6,2),n(7,3),n(8,4),n(9,3),n(10,2),n(11,1),n(12,0),n(14,2),n(15,3),n(16,4),n(17,3),n(18,2),n(20,1),n(22,0),n(24,2),n(26,3),n(28,4),n(30,3),n(32,2),n(34,1),n(36,0),n(38,2),n(40,3),n(42,4),n(44,3),n(46,2),n(48,1),n(50,0),n(52,2),n(54,1),n(56,0),n(58,2),n(60,3)],23),
+js("Ornithology",170,[n(0,2),n(0.5,3),n(1,4),n(1.5,3),n(2,2),n(3,1),n(4,0),n(6,2),n(7,3),n(8,4),n(9,3),n(10,2),n(11,1),n(12,0),n(14,2),n(15,3),n(16,4),n(17,3),n(18,2),n(20,1),n(22,0),n(24,2),n(26,3),n(28,4),n(30,3),n(32,2),n(34,1),n(36,0),n(38,2),n(40,3),n(42,4),n(44,3),n(46,2),n(48,1),n(50,0),n(52,2),n(54,1),n(56,0),n(58,2),n(60,3)],22),
+js("Yardbird Suite",155,[n(0,2),n(1,3),n(2,4),n(2.5,3),n(3,2),n(4,1),n(5,0),n(6,1),n(7,2),n(8,3),n(9,4),n(9.5,3),n(10,2),n(11,1),n(12,0),n(14,2),n(15,3),n(16,4),n(17,3),n(18,2),n(19,1),n(20,0),n(22,2),n(24,3),n(26,4),n(28,3),n(30,2),n(32,1),n(34,0),n(36,2),n(38,3),n(40,4),n(42,3),n(44,2),n(46,1),n(48,0),n(50,2),n(52,1),n(54,0),n(58,0)],23),
+js("Sugar",115,[n(0,0),n(2,1),n(4,2),n(6,1),n(8,0),n(10,2),n(12,3),n(14,2),n(16,1),n(18,0),n(20,1),n(22,2),n(24,3),n(26,2),n(28,1),n(30,0),n(32,2),n(34,3),n(36,4),n(38,3),n(40,2),n(42,1),n(44,0),n(46,1),n(48,2),n(50,3),n(52,2),n(54,1),n(56,0),n(58,1)],31),
+js("Work Song",130,[n(0,0),n(1,1),n(2,2),n(3,1),n(4,0),n(6,0),n(7,1),n(8,2),n(9,1),n(10,0),n(12,2),n(13,3),n(14,4),n(15,3),n(16,2),n(18,1),n(20,0),n(22,2),n(24,3),n(26,4),n(28,3),n(30,2),n(32,1),n(34,0),n(36,2),n(38,3),n(40,4),n(42,2),n(44,1),n(46,0),n(48,1),n(50,0)],24),
+js("Perdido",165,[n(0,2),n(1,2),n(2,3),n(2.5,4),n(3,3),n(4,2),n(5,1),n(6,0),n(8,2),n(9,3),n(10,4),n(11,3),n(12,2),n(14,2),n(15,2),n(16,3),n(16.5,4),n(17,3),n(18,2),n(20,1),n(22,0),n(24,2),n(26,3),n(28,4),n(30,3),n(32,2),n(34,1),n(36,0),n(38,2),n(40,3),n(42,4),n(44,3),n(46,2),n(48,1),n(50,0),n(52,2),n(54,1),n(56,0),n(58,2),n(60,3)],22),
+js("Tune Up",142,[n(0,2),n(2,3),n(4,2),n(6,1),n(8,2),n(10,3),n(12,4),n(14,3),n(16,2),n(18,1),n(20,2),n(22,3),n(24,2),n(26,1),n(28,0),n(30,1),n(32,2),n(34,3),n(36,2),n(38,1),n(40,0),n(42,1),n(44,2),n(46,3),n(48,2),n(50,1),n(52,0),n(54,1),n(56,2),n(58,0)],25),
+js("Stablemates",145,[n(0,2),n(1,2),n(2,3),n(3,2),n(4,1),n(5,0),n(6,1),n(7,2),n(8,3),n(9,4),n(10,3),n(11,2),n(12,1),n(14,2),n(15,3),n(16,4),n(17,3),n(18,2),n(19,1),n(20,0),n(22,2),n(24,3),n(26,4),n(28,3),n(30,2),n(32,1),n(34,0),n(36,2),n(38,3),n(40,4),n(42,2),n(44,1),n(46,0),n(48,1),n(50,0),n(52,2),n(54,1)],23),
+js("Recorda Me",120,[n(0,0),n(2,1),n(4,2),n(6,3),n(8,4),n(10,3),n(12,2),n(14,1),n(16,0),n(18,1),n(20,2),n(22,3),n(24,4),n(26,3),n(28,2),n(30,1),n(32,0),n(34,1),n(36,2),n(38,3),n(40,2),n(42,1),n(44,0),n(46,1),n(48,2),n(50,3),n(52,2),n(54,1),n(56,0),n(58,1)],30),
+js("Peace Piece",100,[n(0,0),n(4,1),n(8,2),n(12,1),n(16,0),n(20,1),n(24,2),n(28,3),n(32,2),n(36,1),n(40,0),n(44,2),n(48,3),n(52,4),n(56,3),n(60,2),n(64,1),n(68,0),n(72,1),n(76,2),n(80,1),n(84,0),n(88,1),n(92,2),n(96,3),n(100,2),n(104,1),n(108,0),n(112,1),n(116,0)],70),
+js("A Night in Tunisia",140,[n(0,4),n(2,3),n(3,2),n(4,1),n(5,0),n(6,1),n(7,2),n(8,3),n(10,4),n(12,3),n(13,2),n(14,1),n(15,0),n(16,0),n(17,1),n(18,2),n(20,3),n(21,3),n(22,4),n(24,3),n(25,2),n(26,1),n(27,0),n(28,0),n(29,2),n(30,3),n(32,4),n(34,3),n(35,2),n(36,1),n(38,0),n(40,0),n(42,1),n(43,2),n(44,3),n(46,4),n(48,3),n(50,2),n(52,1),n(54,0)],28),
+js("Afro Blue",130,[n(0,2),n(1.33,1),n(2.67,2),n(4,3),n(5.33,2),n(6.67,1),n(8,0),n(9.33,1),n(10.67,2),n(12,3),n(13.33,4),n(14.67,3),n(16,2),n(18,2),n(19.33,1),n(20.67,2),n(22,3),n(23.33,2),n(24.67,1),n(26,0),n(27.33,1),n(28.67,2),n(30,3),n(32,2),n(33.33,1),n(34.67,0),n(36,1),n(38,2),n(39.33,3),n(40.67,4),n(42,3),n(44,2),n(46,1),n(48,0)],26),
+js("Anthropology",165,[n(0,3),n(1.35,4),n(2.7,3),n(4.05,2),n(5.4,1),n(6.75,2),n(8.1,3),n(9.45,4),n(10.8,3),n(12.15,2),n(13.5,1),n(14.85,0),n(16.2,1),n(17.55,2),n(18.9,3),n(20.25,4),n(21.6,3),n(24.3,2),n(25.65,3),n(27,4),n(28.35,3),n(29.7,2),n(31.05,1),n(32.4,2),n(33.75,3),n(35.1,4),n(36.45,3),n(37.8,2),n(40.5,1),n(41.85,2),n(43.2,3),n(44.55,4),n(45.9,3),n(48.6,2),n(49.95,1),n(51.3,0),n(54,1),n(56.7,2),n(59.4,3),n(62.1,4)],27),
+js("Beautiful Love",115,[n(0,0),n(2,1),n(4,2),n(6,3),n(8,4),n(10,3),n(12,2),n(14,1),n(16,0),n(18,2),n(20,3),n(22,4),n(24,3),n(26,2),n(28,1),n(30,0),n(32,1),n(34,2),n(36,3),n(38,2),n(40,1),n(42,0),n(44,1),n(46,2),n(48,3),n(50,4),n(52,3),n(54,2),n(56,1),n(58,0)],34),
+js("Bésame Mucho",110,[n(0,1),n(2,2),n(4,3),n(6,3),n(8,2),n(10,1),n(12,0),n(14,1),n(16,2),n(18,1),n(20,0),n(22,0),n(24,1),n(26,2),n(28,3),n(30,3),n(32,2),n(34,1),n(36,0),n(38,1),n(40,2),n(42,3),n(44,2),n(46,1),n(48,0),n(50,1),n(52,2),n(54,3),n(56,4),n(58,3),n(60,2),n(62,1),n(64,0)],38),
+js("Billie's Bounce",140,[n(0,3),n(2,2),n(3,1),n(4,0),n(6,1),n(7,2),n(8,3),n(10,4),n(12,3),n(14,2),n(15,1),n(16,0),n(18,0),n(20,1),n(21,2),n(22,3),n(24,4),n(26,3),n(28,2),n(29,1),n(30,0),n(32,1),n(33,2),n(34,3),n(36,4),n(38,3),n(40,2),n(42,1),n(44,0),n(46,1),n(48,2),n(50,3),n(52,4),n(54,3),n(56,2),n(58,1),n(60,0)],30),
+js("Manhã de Carnaval",120,[n(0,1),n(2,2),n(4,3),n(6,4),n(8,3),n(10,2),n(12,1),n(14,0),n(16,1),n(18,2),n(20,3),n(22,4),n(24,3),n(26,2),n(28,1),n(30,0),n(32,2),n(34,3),n(36,4),n(38,3),n(40,2),n(42,1),n(44,0),n(46,1),n(48,2),n(50,3),n(52,4),n(54,3),n(56,2),n(58,1),n(60,0)],34),
+js("Corcovado",115,[n(0,2),n(3,3),n(6,4),n(9,3),n(12,2),n(15,1),n(18,0),n(21,1),n(24,2),n(27,3),n(30,4),n(33,3),n(36,2),n(39,1),n(42,0),n(45,1),n(48,2),n(51,3),n(54,4),n(57,3),n(60,2),n(63,1),n(66,0),n(69,1),n(72,2),n(75,3),n(78,4),n(81,3),n(84,2),n(87,1),n(90,0)],50),
+js("Doxy",135,[n(0,2),n(2,1),n(3,0),n(4,0),n(5,1),n(6,2),n(8,3),n(10,4),n(12,3),n(14,2),n(16,1),n(17,0),n(18,0),n(19,1),n(20,2),n(22,3),n(24,4),n(26,3),n(28,2),n(30,1),n(32,0),n(34,1),n(35,2),n(36,3),n(38,4),n(40,3),n(42,2),n(44,1),n(46,0),n(48,1),n(49,2),n(50,3),n(52,4),n(54,3),n(56,2),n(58,1),n(60,0)],31),
+js("Four",160,[n(0,4),n(1.3,3),n(2.6,2),n(3.9,1),n(5.2,0),n(6.5,1),n(7.8,2),n(9.1,3),n(10.4,4),n(13,3),n(14.3,2),n(15.6,1),n(18.2,0),n(19.5,1),n(20.8,2),n(22.1,3),n(23.4,4),n(26,3),n(27.3,2),n(28.6,1),n(29.9,0),n(31.2,1),n(32.5,2),n(33.8,3),n(36.4,4),n(37.7,3),n(39,2),n(41.6,1),n(42.9,2),n(44.2,3),n(46.8,4),n(49.4,3),n(52,2),n(54.6,1),n(57.2,0),n(59.8,1),n(62.4,2),n(65,3),n(67.6,4),n(70.2,3)],30),
+js("Freddie Freeloader",130,[n(0,2),n(3,1),n(6,0),n(9,1),n(12,2),n(15,3),n(18,4),n(21,3),n(24,2),n(27,1),n(30,0),n(33,1),n(36,2),n(39,3),n(42,4),n(45,3),n(48,2),n(51,1),n(54,0),n(57,1),n(60,2),n(63,3),n(66,4),n(69,3),n(72,2),n(75,1),n(78,0)],40),
+js("Green Dolphin Street",140,[n(0,2),n(2,3),n(4,4),n(6,3),n(7,2),n(8,1),n(10,0),n(12,1),n(14,2),n(16,3),n(18,4),n(20,3),n(22,2),n(24,1),n(25,0),n(26,0),n(28,1),n(30,2),n(32,3),n(34,4),n(36,3),n(38,2),n(39,1),n(40,0),n(42,1),n(44,2),n(46,3),n(48,4),n(50,3),n(52,2),n(54,1),n(56,0)],28),
+js("I Got Rhythm",170,[n(0,4),n(1.35,3),n(2.7,4),n(4.05,3),n(5.4,2),n(6.75,1),n(8.1,2),n(9.45,3),n(10.8,4),n(13.5,3),n(14.85,2),n(16.2,1),n(17.55,0),n(18.9,1),n(20.25,2),n(21.6,3),n(24.3,4),n(25.65,3),n(27,2),n(28.35,1),n(29.7,0),n(32.4,1),n(33.75,2),n(35.1,3),n(37.8,4),n(39.15,3),n(40.5,2),n(43.2,1),n(44.55,2),n(45.9,3),n(48.6,4),n(49.95,3),n(51.3,2),n(54,1),n(56.7,0),n(59.4,1),n(62.1,2),n(64.8,3),n(67.5,4)],28),
+js("Impressions",160,[n(0,0),n(2,1),n(4,2),n(6,3),n(8,4),n(10,3),n(12,2),n(14,1),n(16,0),n(18,0),n(20,1),n(22,2),n(24,3),n(26,4),n(28,3),n(30,2),n(32,1),n(34,0),n(36,0),n(38,1),n(40,2),n(42,3),n(44,4),n(46,3),n(48,2),n(50,1),n(52,0),n(54,1),n(56,2),n(58,3),n(60,4),n(62,3),n(64,2),n(66,1),n(68,0)],30),
+js("Maiden Voyage",120,[n(0,2),n(4,3),n(8,2),n(12,1),n(16,2),n(20,3),n(24,4),n(28,3),n(32,2),n(36,1),n(40,0),n(44,1),n(48,2),n(52,3),n(56,4),n(60,3),n(64,2),n(68,1),n(72,0),n(76,1),n(80,2),n(84,3),n(88,4),n(92,3),n(96,2),n(100,1),n(104,0),n(108,1),n(112,2),n(116,3),n(120,4)],65),
+js("My Funny Valentine",100,[n(0,3),n(4,2),n(8,1),n(12,0),n(16,1),n(20,2),n(24,3),n(28,4),n(32,3),n(36,2),n(40,1),n(44,0),n(48,1),n(52,2),n(56,3),n(60,4),n(64,3),n(68,2),n(72,1),n(76,0),n(80,1),n(84,2),n(88,3),n(92,2),n(96,1),n(100,0)],62),
+js("Oleo",170,[n(0,4),n(1.35,3),n(2.7,4),n(4.05,3),n(5.4,2),n(6.75,3),n(8.1,4),n(10.8,3),n(12.15,2),n(13.5,1),n(14.85,2),n(16.2,3),n(18.9,4),n(20.25,3),n(21.6,2),n(24.3,1),n(25.65,2),n(27,3),n(28.35,4),n(29.7,3),n(32.4,2),n(33.75,1),n(35.1,0),n(37.8,1),n(39.15,2),n(40.5,3),n(43.2,4),n(44.55,3),n(45.9,2),n(48.6,1),n(49.95,2),n(51.3,3),n(54,4),n(56.7,3),n(59.4,2),n(62.1,1),n(64.8,0)],27),
+js("So What",130,[n(0,0),n(3,2),n(6,3),n(9,2),n(12,0),n(15,2),n(18,3),n(21,2),n(24,0),n(27,2),n(30,3),n(33,1),n(36,0),n(39,2),n(42,3),n(45,2),n(48,0),n(51,2),n(54,3),n(57,2),n(60,0),n(63,2),n(66,3),n(69,1),n(72,0)],36),
+js("Take Five",150,[n(0,2),n(2.5,3),n(5,4),n(7.5,3),n(10,2),n(12.5,4),n(15,3),n(17.5,2),n(20,1),n(22.5,4),n(25,3),n(27.5,2),n(30,1),n(32.5,0),n(35,4),n(37.5,3),n(40,2),n(42.5,1),n(45,0),n(47.5,4),n(50,3),n(52.5,2),n(55,1),n(57.5,0),n(60,4),n(62.5,3),n(65,2),n(67.5,1),n(70,0)],30),
+js("Joy Spring",155,[n(0,3),n(1.3,4),n(2.6,3),n(3.9,2),n(5.2,1),n(6.5,2),n(7.8,3),n(9.1,4),n(10.4,3),n(13,2),n(14.3,1),n(15.6,0),n(18.2,1),n(19.5,2),n(20.8,3),n(22.1,4),n(23.4,3),n(24.7,2),n(26,1),n(28.6,0),n(29.9,1),n(31.2,2),n(33.8,3),n(35.1,4),n(36.4,3),n(39,2),n(40.3,1),n(41.6,0),n(44.2,1),n(45.5,2),n(46.8,3),n(49.4,4),n(52,3),n(54.6,2),n(57.2,1),n(59.8,0)],27),
+js("Song for My Father",130,[n(0.5,4),n(1,1),n(1.5,0),n(2,4),n(3,1),n(3.5,2),n(4,3),n(4.5,2),n(5,1),n(6,0),n(7,4),n(8,1),n(8.5,1),n(9,2),n(9.5,3),n(10,2),n(10.5,1),n(11,0),n(12,4),n(13,1),n(13.5,0),n(14,4),n(15,1),n(15.5,2),n(16,3),n(16.5,4),n(17,3),n(18,2),n(19,1),n(20,0),n(24,4),n(25,1),n(25.5,0),n(26,4),n(27,1),n(28,2),n(28.5,3),n(29,4),n(30,3),n(32,0)],34),
+js("Señor Blues",140,[n(0,1),n(1,0),n(2,0),n(3,0),n(3.5,4),n(4,1),n(5,0),n(6,1),n(6.5,2),n(7,3),n(7.5,2),n(8,1),n(9,0),n(10,1),n(11,0),n(12,4),n(12.5,3),n(13,2),n(14,1),n(14.5,0),n(15,1),n(16,0),n(18,4),n(19,1),n(20,2),n(20.5,3),n(21,4),n(22,3),n(23,2),n(24,1),n(25,0),n(28,3),n(28.5,4),n(29,3),n(32,0)],28),
+js("The Preacher",126,[n(0,2),n(0.5,3),n(1,4),n(1.5,3),n(2,2),n(2.5,1),n(3,0),n(4,2),n(4.5,3),n(5,4),n(5.5,3),n(6,2),n(7,1),n(7.5,0),n(8,2),n(8.5,3),n(9,4),n(10,2),n(11,4),n(11.5,3),n(12,2),n(12.5,1),n(13,0),n(14,1),n(14.5,2),n(15,3),n(16,2),n(16.5,3),n(17,4),n(18,3),n(18.5,2),n(19,1),n(20,0),n(22,4),n(23,3),n(24,2),n(26,0),n(28,2),n(28.5,3),n(32,0)],32),
+js("Moanin'",118,[n(0,1),n(1,1),n(2,2),n(3,2),n(4,1),n(5,1),n(6,0),n(7,1),n(8,2),n(9,2),n(10,1),n(10.5,0),n(11,4),n(12,0),n(13,1),n(14,1),n(15,1),n(16,2),n(17,2),n(18,1),n(19,1),n(20,0),n(21,1),n(22,2),n(23,2),n(24,1),n(24.5,0),n(25,4),n(26,0),n(27,1),n(28,1),n(29,2),n(30,3),n(31,2),n(32,1),n(33,0),n(34,4),n(36,0)],37),
+js("Along Came Betty",132,[n(0,4),n(1,3),n(2,4),n(3,2),n(4,1),n(5,3),n(6,4),n(7,3),n(7.5,2),n(8,1),n(9,0),n(10,1),n(11,2),n(12,3),n(12.5,4),n(13,3),n(14,2),n(15,1),n(16,4),n(17,3),n(18,4),n(19,2),n(20,1),n(21,3),n(22,4),n(23,3),n(23.5,2),n(24,1),n(25,0),n(26,1),n(27,2),n(28,3),n(29,3),n(30,2),n(31,1),n(32,0),n(34,4),n(36,0)],35),
+js("Dat Dere",140,[n(0,2),n(0.5,3),n(1,4),n(2,3),n(2.5,2),n(3,1),n(4,0),n(4.5,1),n(5,2),n(6,2),n(6.5,3),n(7,4),n(8,3),n(8.5,2),n(9,1),n(10,3),n(10.5,4),n(11,3),n(12,2),n(12.5,1),n(13,0),n(14,1),n(15,2),n(16,2),n(16.5,3),n(17,4),n(18,3),n(18.5,2),n(19,1),n(20,0),n(22,2),n(23,4),n(24,3),n(26,1),n(28,4),n(30,0)],30),
+js("Footprints",130,[n(1,4),n(3,0),n(4,0),n(6,4),n(8,0),n(9,0),n(11,4),n(13,1),n(15,2),n(16,3),n(18,2),n(19,1),n(21,0),n(22,4),n(24,0),n(25,0),n(27,4),n(29,0),n(30,0),n(32,4),n(34,1),n(36,2),n(37,3),n(39,2),n(40,1),n(42,0),n(43,4),n(45,0),n(48,1),n(51,0)],26),
+js("Juju",140,[n(0,0),n(1,1),n(2,2),n(3,0),n(4,1),n(5,2),n(6,0),n(7,1),n(8,2),n(9,3),n(10,2),n(11,1),n(12,0),n(14,4),n(15,3),n(16,2),n(17,3),n(18,4),n(20,3),n(21,2),n(22,1),n(23,0),n(24,1),n(25,2),n(26,3),n(28,2),n(30,1),n(32,0),n(34,4),n(36,3),n(38,2),n(40,1),n(42,0),n(44,4),n(48,0)],36),
+js("Yes or No",152,[n(0,4),n(1,3),n(2,2),n(3,1),n(4,0),n(6,4),n(7,3),n(8,2),n(9,1),n(10,0),n(12,3),n(13,4),n(14,3),n(15,2),n(16,1),n(18,3),n(19,4),n(20,3),n(21,2),n(22,1),n(24,4),n(25,3),n(26,4),n(27,3),n(28,2),n(30,1),n(31,0),n(32,1),n(34,2),n(35,3),n(36,4),n(38,3),n(39,2),n(40,1),n(42,0),n(44,4),n(46,3),n(48,2),n(50,1),n(52,0)],38),
+js("Spain",128,[n(0,2),n(1,1),n(2,0),n(3,0),n(4,0),n(5,0),n(6,2),n(7,1),n(8,0),n(9,0),n(10,0),n(11,0),n(12,4),n(13,4),n(14,4),n(15,3),n(16,3),n(17,3),n(18,2),n(19,2),n(20,2),n(21,1),n(22,1),n(23,0),n(24,4),n(25,3),n(26,2),n(27,1),n(28,0),n(30,4),n(31,3),n(32,2),n(34,4),n(36,3),n(38,2),n(40,1),n(42,0),n(44,4),n(48,3),n(52,0)],48),
+js("500 Miles High",165,[n(0,4),n(1,3),n(2,4),n(3,2),n(4,3),n(5,4),n(6,3),n(7,2),n(8,1),n(9,0),n(10,4),n(11,3),n(12,4),n(13,2),n(14,3),n(15,4),n(16,3),n(17,2),n(18,1),n(19,0),n(20,4),n(22,3),n(24,4),n(26,2),n(28,1),n(30,0),n(32,4),n(34,3),n(36,2),n(38,1),n(40,0),n(42,4),n(44,3),n(46,2),n(48,1),n(50,0),n(52,4),n(56,0)],42),
+js("Armando's Rhumba",145,[n(0,0),n(0.5,1),n(1,2),n(1.5,1),n(2,0),n(2.5,1),n(3,2),n(3.5,3),n(4,4),n(4.5,3),n(5,2),n(5.5,1),n(6,0),n(7,2),n(7.5,3),n(8,4),n(8.5,3),n(9,2),n(10,1),n(10.5,0),n(12,2),n(12.5,3),n(13,4),n(14,3),n(14.5,2),n(15,1),n(16,0),n(17,2),n(18,4),n(19,3),n(20,2),n(21,1),n(22,0),n(24,2),n(24.5,3),n(25,4),n(26,3),n(28,1),n(30,4),n(32,0)],32),
+js("Are You Going With Me",110,[n(4,0),n(6,1),n(8,2),n(10,3),n(12,2),n(14,1),n(16,0),n(18,1),n(20,2),n(22,3),n(24,4),n(26,3),n(28,2),n(30,1),n(32,0),n(36,4),n(38,3),n(40,2),n(42,1),n(44,0),n(46,1),n(48,2),n(50,3),n(52,4),n(56,3),n(58,2),n(60,1),n(62,0),n(64,1),n(66,2),n(68,3),n(72,4),n(76,0)],55),
+js("James",120,[n(0,3),n(2,4),n(4,3),n(5,2),n(7,1),n(9,0),n(11,1),n(13,2),n(15,3),n(17,4),n(19,3),n(20,2),n(22,1),n(24,0),n(26,1),n(28,2),n(30,3),n(32,4),n(34,3),n(36,2),n(37,1),n(39,0),n(41,1),n(43,2),n(45,3),n(47,4),n(49,3),n(51,2),n(53,1),n(55,0),n(57,4),n(60,0)],43),
+js("Phase Dance",140,[n(0,0),n(0.5,1),n(1,2),n(1.5,1),n(2,0),n(3,1),n(3.5,2),n(4,3),n(4.5,2),n(5,1),n(6,0),n(7,2),n(7.5,3),n(8,4),n(9,3),n(9.5,2),n(10,1),n(11,0),n(12,2),n(12.5,3),n(13,4),n(14,3),n(14.5,2),n(15,1),n(16,0),n(18,4),n(19,3),n(20,2),n(22,1),n(24,0),n(26,2),n(28,4),n(30,3),n(32,2),n(34,1),n(36,0),n(40,4),n(44,0)],38),
+js("Better Git It in Your Soul",150,[n(0,4),n(1,4),n(2,4),n(3,0),n(4,4),n(5,4),n(6,4),n(7,0),n(8,4),n(9,4),n(10,0),n(11,0),n(12,2),n(13,3),n(14,2),n(15,1),n(16,0),n(18,4),n(19,4),n(20,4),n(21,0),n(22,4),n(23,4),n(24,4),n(25,0),n(26,4),n(27,0),n(28,2),n(29,3),n(30,2),n(31,1),n(32,0),n(34,4),n(36,0),n(38,4),n(40,0)],31),
+js("Haitian Fight Song",132,[n(0,0),n(1,0),n(2,0),n(3,0),n(4,4),n(5,3),n(6,2),n(7,1),n(8,0),n(9,0),n(10,0),n(11,0),n(12,4),n(13,3),n(14,2),n(15,1),n(16,0),n(18,0),n(20,0),n(22,4),n(23,3),n(24,2),n(25,1),n(26,0),n(28,0),n(30,1),n(32,2),n(34,3),n(36,4),n(38,3),n(40,2),n(42,1),n(44,0),n(48,4),n(52,0)],42),
+js("Mercy Mercy Mercy",120,[n(0,4),n(2,3),n(4,4),n(5,3),n(7,2),n(9,1),n(11,0),n(13,1),n(15,2),n(16,3),n(18,4),n(20,3),n(22,4),n(24,3),n(26,2),n(28,1),n(30,0),n(32,1),n(34,2),n(36,3),n(38,4),n(40,3),n(42,2),n(44,1),n(46,0),n(48,4),n(52,0)],37),
+js("Cold Duck Time",130,[n(0,1),n(0.5,1),n(1,1),n(2,1),n(3,1),n(4,0),n(5,0),n(6,4),n(7,4),n(8,1),n(8.5,1),n(9,1),n(10,1),n(11,1),n(12,0),n(13,0),n(14,4),n(15,4),n(16,2),n(17,3),n(18,2),n(19,1),n(20,0),n(22,4),n(24,1),n(25,0),n(26,1),n(28,2),n(30,1),n(32,0)],30),
+js("Watermelon Man",126,[n(0,1),n(1,1),n(2,1),n(3,1),n(4,0),n(5,0),n(6,0),n(7,0),n(8,1),n(9,1),n(10,1),n(11,1),n(12,2),n(13,2),n(14,2),n(15,2),n(16,0),n(17,0),n(18,0),n(19,0),n(20,1),n(21,1),n(22,1),n(23,1),n(24,3),n(24.5,4),n(25,3),n(26,2),n(27,1),n(28,0),n(30,4),n(32,0)],32),
+js("Cry Me a River",108,[n(0,4),n(1.5,3),n(2.5,2),n(3.5,1),n(4.5,0),n(6,3),n(7,2),n(7.5,1),n(8.5,0),n(10,2),n(11,1),n(11.5,0),n(13,3),n(14.5,2),n(15.5,3),n(16.5,4),n(17.5,3),n(18,2),n(19,1),n(20,0),n(22,2),n(23,0),n(24.5,1),n(26,0),n(28,2),n(30,0),n(32,3),n(34,2),n(35,1),n(36,0),n(38,2),n(40,3),n(42,2),n(44,1),n(46,0)],27),
+js("Lover Man",100,[n(0,3),n(2,4),n(4,3),n(5,2),n(6,1),n(7,0),n(9,1),n(10,2),n(11,3),n(13,4),n(15,3),n(16,2),n(17,1),n(18,0),n(20,2),n(22,3),n(23,4),n(24,3),n(25,2),n(26,1),n(27,0),n(29,1),n(30.5,2),n(32,3),n(34,2),n(36,1),n(38,0),n(40,2),n(42,3),n(44,2),n(46,1),n(48,0)],30),
+js("God Bless the Child",105,[n(0,0),n(1,1),n(2,2),n(3,3),n(4,4),n(5,3),n(6,2),n(7,1),n(8,0),n(10,2),n(11,3),n(12,4),n(13,3),n(14,2),n(15,1),n(16,0),n(18,1),n(19,2),n(20,3),n(21,4),n(22,3),n(23,2),n(24,1),n(26,0),n(28,2),n(30,4),n(32,3),n(34,2),n(36,0),n(38,1),n(40,2),n(42,3),n(44,2),n(46,1),n(48,0)],29),
+js("Stormy Weather",100,[n(0,4),n(2,3),n(3,2),n(4,1),n(6,0),n(8,1),n(9,2),n(10,1),n(11,0),n(13,2),n(15,3),n(16,4),n(17,3),n(18,2),n(20,1),n(22,0),n(24,2),n(25,1),n(26,0),n(28,3),n(30,2),n(31,1),n(32,0),n(34,2),n(36,3),n(38,2),n(40,1),n(42,0),n(44,3),n(46,2),n(48,1),n(50,0)],32),
+js("The Man I Love",112,[n(0,2),n(1,3),n(2,4),n(3,3),n(4,2),n(5,1),n(6,0),n(8,1),n(9,2),n(10,3),n(12,4),n(14,3),n(15,2),n(16,1),n(18,0),n(20,2),n(21,3),n(22,4),n(23,3),n(24,2),n(26,1),n(28,0),n(30,2),n(32,4),n(34,3),n(36,2),n(38,1),n(40,0),n(42,2),n(44,3),n(46,4),n(48,3),n(50,2),n(52,0)],29),
+js("What a Wonderful World",100,[n(0,0),n(2,2),n(4,3),n(6,4),n(8,3),n(9,2),n(10,1),n(12,0),n(14,1),n(16,2),n(18,3),n(20,4),n(22,3),n(23,2),n(24,1),n(26,0),n(28,2),n(30,3),n(32,4),n(34,3),n(36,2),n(38,1),n(40,0),n(42,2),n(44,3),n(46,4),n(48,3),n(50,2),n(52,1),n(54,0),n(56,2),n(58,3),n(60,4),n(62,3),n(64,1),n(66,0)],41),
+js("Unforgettable",110,[n(0,3),n(2,4),n(3,3),n(4,2),n(6,1),n(8,0),n(10,2),n(11,3),n(12,4),n(14,3),n(16,2),n(18,1),n(20,0),n(22,2),n(23,3),n(24,4),n(26,3),n(27,2),n(28,1),n(30,0),n(32,2),n(34,4),n(36,3),n(38,2),n(40,1),n(42,0),n(44,2),n(46,3),n(48,2),n(50,1),n(52,0)],30),
+js("Nature Boy",100,[n(0,0),n(3,1),n(6,2),n(8,3),n(10,4),n(12,3),n(14,2),n(16,1),n(18,0),n(21,4),n(23,3),n(25,2),n(27,1),n(30,0),n(33,2),n(35,3),n(37,4),n(39,3),n(41,2),n(43,1),n(45,0),n(48,2),n(50,4),n(52,3),n(54,2),n(56,0),n(58,1),n(60,2),n(62,3),n(64,2),n(66,1),n(68,0)],42),
+js("Bernie's Tune",155,[n(0,4),n(2,3),n(3,2),n(4,1),n(5,0),n(7,2),n(8,3),n(9,4),n(11,3),n(12,2),n(13,1),n(15,0),n(17,2),n(18,3),n(20,4),n(21,3),n(22,2),n(24,1),n(26,0),n(28,3),n(29,4),n(30,3),n(32,2),n(34,1),n(36,0),n(38,2),n(39,3),n(40,4),n(42,3),n(43,2),n(44,1),n(46,0),n(48,2),n(50,4),n(52,0)],22),
+js("Line for Lyons",140,[n(0,2),n(1,3),n(2,4),n(4,3),n(5,2),n(6,1),n(8,0),n(10,1),n(11,2),n(12,3),n(14,4),n(16,3),n(17,2),n(18,1),n(20,0),n(22,2),n(23,3),n(24,4),n(26,3),n(27,2),n(28,1),n(30,0),n(32,3),n(33,4),n(34,3),n(36,2),n(38,1),n(40,0),n(42,2),n(43,3),n(44,4),n(46,3),n(48,2),n(50,1),n(52,0),n(54,2),n(56,4),n(58,0)],26),
+js("Walkin' Shoes",160,[n(0,0),n(2,1),n(3,2),n(4,3),n(6,4),n(8,3),n(9,2),n(10,1),n(12,0),n(14,2),n(16,3),n(17,4),n(18,3),n(20,2),n(22,1),n(24,0),n(26,2),n(27,3),n(28,4),n(30,3),n(32,2),n(34,1),n(36,0),n(38,2),n(39,3),n(40,4),n(42,3),n(44,2),n(46,1),n(48,0),n(50,2),n(52,4),n(54,0)],22),
+js("Five Brothers",165,[n(0,4),n(2,3),n(3,4),n(4,2),n(6,1),n(8,0),n(10,2),n(11,3),n(12,4),n(14,3),n(16,2),n(17,1),n(18,0),n(20,3),n(22,4),n(23,3),n(24,2),n(26,1),n(28,0),n(30,2),n(31,3),n(32,4),n(34,3),n(36,2),n(38,1),n(40,0),n(42,2),n(43,3),n(44,4),n(46,3),n(48,2),n(50,1),n(52,0),n(54,2),n(56,4),n(58,0)],22),
+js("Don't Know Why",120,[n(0,1),n(1,2),n(2,3),n(3,4),n(4,3),n(5,2),n(6,1),n(8,0),n(9,1),n(10,2),n(11,3),n(12,4),n(14,3),n(15,2),n(16,1),n(18,0),n(20,2),n(21,3),n(22,4),n(23,3),n(24,2),n(26,1),n(27,0),n(29,2),n(30,3),n(31,4),n(32,3),n(34,2),n(36,1),n(38,0),n(40,2),n(42,3),n(44,4),n(46,3),n(48,2),n(50,1),n(52,0)],27),
+js("Come Away With Me",110,[n(0,0),n(2,1),n(4,2),n(6,3),n(8,4),n(10,3),n(12,2),n(14,1),n(16,0),n(18,2),n(20,3),n(22,4),n(24,3),n(26,2),n(28,1),n(30,0),n(32,2),n(34,3),n(36,4),n(38,3),n(40,2),n(42,1),n(44,0),n(46,2),n(48,4),n(50,3),n(52,2),n(54,0)],31),
+js("Put Your Records On",120,[n(0,2),n(1,3),n(2,4),n(3,3),n(4,2),n(5,1),n(6,0),n(8,1),n(9,2),n(10,3),n(12,4),n(14,3),n(15,2),n(16,1),n(17,0),n(19,2),n(20,3),n(21,4),n(22,3),n(23,2),n(25,1),n(26,0),n(28,2),n(30,3),n(32,4),n(34,3),n(36,2),n(38,1),n(40,0),n(42,2),n(44,4),n(46,3),n(48,2),n(50,0)],26),
+js("Bluesette",140,[n(0,3),n(1,4),n(2,3),n(4,2),n(5,1),n(6,0),n(8,2),n(9,3),n(10,4),n(12,3),n(13,2),n(14,1),n(16,0),n(18,2),n(19,3),n(20,4),n(22,3),n(24,2),n(26,1),n(28,0),n(30,2),n(32,3),n(33,4),n(34,3),n(36,2),n(38,1),n(40,0),n(42,3),n(44,4),n(46,3),n(48,2),n(50,1),n(52,0),n(54,2),n(56,4),n(58,3),n(60,0)],27),
+js("Honeysuckle Rose",150,[n(0,0),n(2,2),n(3,3),n(4,4),n(6,3),n(7,2),n(8,1),n(10,0),n(12,2),n(14,3),n(15,4),n(16,3),n(18,2),n(20,1),n(22,0),n(24,2),n(25,3),n(26,4),n(28,3),n(30,2),n(32,1),n(34,0),n(36,3),n(38,4),n(40,3),n(42,2),n(44,1),n(46,0),n(48,2),n(50,4),n(52,0),n(54,2),n(56,3),n(58,4),n(60,0)],25),
+js("Tea for Two",130,[n(0,3),n(1,4),n(2,3),n(3,2),n(4,1),n(5,0),n(7,2),n(8,3),n(9,4),n(10,3),n(11,2),n(12,1),n(14,0),n(16,2),n(17,3),n(18,4),n(20,3),n(21,2),n(22,1),n(24,0),n(26,2),n(28,4),n(30,3),n(31,2),n(32,1),n(34,0),n(36,2),n(38,3),n(40,0),n(42,2),n(44,4),n(46,3),n(48,2),n(50,1),n(52,0)],25),
+js("A-Tisket A-Tasket",140,[n(0,4),n(1,3),n(2,4),n(3,3),n(4,2),n(5,1),n(6,0),n(8,2),n(9,3),n(10,4),n(12,3),n(14,2),n(15,1),n(16,0),n(18,2),n(20,3),n(21,4),n(22,3),n(24,2),n(26,1),n(28,0),n(30,2),n(32,4),n(34,3),n(36,2),n(38,1),n(40,0),n(42,2),n(44,3),n(46,4),n(48,3),n(50,0)],23),
+js("It's Only a Paper Moon",125,[n(0,2),n(1,3),n(2,4),n(3,3),n(4,2),n(5,1),n(6,0),n(8,1),n(9,2),n(10,3),n(12,4),n(14,3),n(15,2),n(16,1),n(18,0),n(20,2),n(22,3),n(24,4),n(26,3),n(28,2),n(30,1),n(32,0),n(34,2),n(36,3),n(38,4),n(40,3),n(42,2),n(44,1),n(46,0),n(48,2),n(50,4),n(52,3),n(54,2),n(56,0)],28),
+];
+
+// ==================== GAME STATE ====================
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const engine=new RhythmEngine({playNote(n){if(!audioCtx)return;playShakuhachi(n.pitch,audioCtx.currentTime+.01)},
+  judgment(d){if(d.result==="perfect"){sFl=0.15;sSh=6;showJ("良","j-perfect")}else if(d.result==="good"){sFl=0.08;sSh=3;showJ("可","j-good")}else{showJ("不可","j-miss")}},
+  miss(){showJ("不可","j-miss")},comboChange(){updateCombo()},tick(){updateScore()},complete(d){endGame(d)}});
+let aId=null,sFl=0,sSh=0;
+const HX=.2,NS=200;
+function updateScore(){document.getElementById("score-value").textContent=engine.score;
+  const t=engine.totalNotes,h=engine.perfects+engine.goods;
+  document.getElementById("acc-value").textContent=t>0?Math.round(h/Math.max(t,h+engine.misses)*100)+"%":"--%"}
+function updateCombo(){const el=document.getElementById("combo-value"),c=engine.combo;el.textContent=c;
+  if(c>=10){el.style.opacity="1";el.style.transform="scale(1.15)";setTimeout(()=>el.style.transform="scale(1)",80)}
+  else if(c>0)el.style.opacity=".7";else el.style.opacity="0"}
+function showJ(t,c){const el=document.getElementById("judgment");el.textContent=t;el.className=c;void el.offsetWidth;el.className=c;setTimeout(()=>{el.className="";el.textContent=""},600)}
+
+// Input
+function handlePitch(i){engine.hit(i)}
+canvas.addEventListener("touchstart",e=>{e.preventDefault();initAudio();
+  for(const t of e.changedTouches){const p=Math.floor(t.clientX/window.innerWidth*5);handlePitch(Math.min(4,p))}},{passive:false});
+window.addEventListener("keydown",e=>{if(e.repeat)return;initAudio();
+  const k=e.key;if(k>="1"&&k<="5")handlePitch(parseInt(k)-1);
+  else if(k>="a"&&k<="e")handlePitch(k.charCodeAt(0)-97)});
+canvas.addEventListener("click",initAudio);
+// Glasses voice input
+let vr=null,gm=false;
+function detGl(){const w=Math.min(window.innerWidth,screen.width||9999),h=Math.min(window.innerHeight,screen.height||9999);
+  gm=(w<=420&&h<=340)||(w<=340&&h<=420);if(gm)startVI();return gm}
+function startVI(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
+  try{vr=new SR();vr.lang="zh-CN";vr.continuous=true;vr.interimResults=false;
+    vr.onresult=e=>{const t=e.results[e.results.length-1][0].transcript.trim();
+      if(/一|1|re|来/i.test(t))handlePitch(0);else if(/二|2|fa|发|法/i.test(t))handlePitch(1);
+      else if(/三|3|so|搜/i.test(t))handlePitch(2);else if(/四|4|ra|拉/i.test(t))handlePitch(3);
+      else if(/五|5|do|都/i.test(t))handlePitch(4)};
+    vr.onerror=()=>{};vr.onend=()=>{if(gm)vr.start()};vr.start();document.getElementById("voice-bar").classList.add("show")}catch(e){}}
+function stopVI(){if(vr){try{vr.stop()}catch(e){};vr=null}document.getElementById("voice-bar").classList.remove("show")}
+
+// ==================== SMART RING INPUT ====================
+let ringActive=false,ringBeta=0,ringGamma=0,ringFc=0;
+const RTH=8,RTILT=5,RSHAKE=20;
+function initRing(){if(typeof DeviceOrientationEvent==='undefined')return;
+ if(typeof DeviceOrientationEvent.requestPermission==='function'){document.addEventListener('click',function rp(){DeviceOrientationEvent.requestPermission().then(s=>{if(s==='granted')startRing()}).catch(()=>{})},{once:true})}
+ else startRing()}
+function startRing(){ringActive=true;window.addEventListener('deviceorientation',onRing)}
+function onRing(e){if(!ringActive)return;ringFc++;if(ringFc%RTH!==0)return;
+ const b=e.beta||0,g=e.gamma||0,db=b-ringBeta,dg=g-ringGamma;ringBeta=b;ringGamma=g;
+ if(Math.abs(db)>RSHAKE||Math.abs(dg)>RSHAKE){handlePitch(2);return}
+ if(db<-RTILT)handlePitch(4);else if(db>RTILT)handlePitch(0);
+ else if(dg<-RTILT)handlePitch(1);else if(dg>RTILT)handlePitch(3)}
+
+// ==================== SMART CANE INPUT ====================
+let caneActive=false,caneFc=0;
+const CTH=6,CTAP=8,CSWING=3;
+function initCane(){if(typeof DeviceMotionEvent==='undefined')return;
+ if(typeof DeviceMotionEvent.requestPermission==='function'){document.addEventListener('click',function cp(){DeviceMotionEvent.requestPermission().then(s=>{if(s==='granted')startCane()}).catch(()=>{})},{once:true})}
+ else startCane()}
+function startCane(){caneActive=true;window.addEventListener('devicemotion',onCane)}
+function onCane(e){if(!caneActive)return;caneFc++;if(caneFc%CTH!==0)return;
+ const a=e.accelerationIncludingGravity||e.acceleration||{},ax=a.x||0,ay=a.y||0,az=a.z||0;
+ const dm=Math.sqrt(ax*ax+ay*ay+az*az);
+ if(dm>CTAP){handlePitch(2);return}
+ if(Math.abs(ax)>CSWING||Math.abs(ay)>CSWING){handlePitch(Math.abs(ax)>Math.abs(ay)?(ax>0?3:1):(ay>0?4:0))}}
+
+// Game loop
+function startGame(sid){initAudio();const sd=SONGS.find(s=>s.title===sid)||SONGS[0];engine.load(sd);engine.start(2);
+  document.getElementById("start-screen").style.display="none";document.getElementById("hud").style.display="flex";
+  document.getElementById("result-screen").classList.remove("show");document.getElementById("combo-value").style.opacity="0";
+  updateScore();updateCombo();resize();rl()}
+function restartGame(){engine.stop();if(aId){cancelAnimationFrame(aId);aId=null}
+  document.getElementById("start-screen").style.display="flex";document.getElementById("hud").style.display="none";
+  document.getElementById("result-screen").classList.remove("show");document.getElementById("combo-value").style.opacity="0"}
+function rl(){if(engine.isFinished)return;if(sFl>0)sFl*=.85;if(sSh>0)sSh*=.85;render();aId=requestAnimationFrame(rl)}
+function endGame(d){if(aId){cancelAnimationFrame(aId);aId=null}document.getElementById("hud").style.display="none";
+  const rs=document.getElementById("result-screen");rs.classList.add("show");
+  document.getElementById("rs").innerHTML=`<div class="si"><div class="sv">${d.perfects}</div><div class="slbl">良</div></div><div class="si"><div class="sv">${d.goods}</div><div class="slbl">可</div></div><div class="si"><div class="sv">${d.misses}</div><div class="slbl">不可</div></div><div class="si"><div class="sv">${d.combo}</div><div class="slbl">最大连击</div></div><div class="si"><div class="sv">${d.score}</div><div class="slbl">得点</div></div>`;
+  const g=document.getElementById("rg");if(d.accuracy>=.95)g.textContent="🥇";else if(d.accuracy>=.85)g.textContent="🥈";else if(d.accuracy>=.7)g.textContent="🥉";else g.textContent="💪"}
+
+// Render
+function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight}
+window.addEventListener("resize",resize);
+function render(){const W=canvas.width,H=canvas.height;ctx.clearRect(0,0,W,H);
+  const bg=ctx.createRadialGradient(W*.3,H*.5,0,W*.3,H*.5,W*.8);bg.addColorStop(0,"#141c10");bg.addColorStop(1,"#0a0a08");
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  const hx=W*HX;ctx.strokeStyle="rgba(120,160,80,.5)";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(hx,0);ctx.lineTo(hx,H);ctx.stroke();
+  const s=engine.song;if(!s)return;const bw=NS*(s.bpm/120)*(W/800);const now=engine.elapsed;
+  const vn=engine.getVisibleNotes(.3,6);
+  // Shakuhachi visual
+  const sx=sSh?(Math.random()-.5)*sSh:0,sy=sSh?(Math.random()-.5)*sSh:0;
+  drawShakuhachi(hx+sx,H*.5+sy,Math.min(W*.04,30),(sFl>.01)?sFl:0);
+  // Lanes
+  for(let i=0;i<5;i++){const ly=H*(.15+i*.175);
+    ctx.strokeStyle="rgba(100,140,60,.2)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,ly);ctx.lineTo(W,ly);ctx.stroke();
+    ctx.fillStyle="rgba(120,160,80,.5)";ctx.font=`${Math.max(10,W*.02)}px "PingFang SC","Microsoft YaHei",sans-serif`;
+    ctx.textAlign="center";ctx.fillText(PITCHES[i].name,hx-Math.min(W*.04,30)*3,ly+5)}
+  // Notes
+  for(const n of vn){const x=hx+(n.time-now)*bw,ly=H*(.15+n.pitch*.175),r=Math.min(W*.025,18),a=n.judged?.3:1;
+    ctx.save();ctx.globalAlpha=a;
+    const g=ctx.createRadialGradient(x,ly,r*.2,x,ly,r);
+    g.addColorStop(0,"#80c060");g.addColorStop(.7,"#406020");g.addColorStop(1,"#102008");
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,ly,r,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="#a0d080";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,ly,r,0,Math.PI*2);ctx.stroke();
+    ctx.restore()}
+  // Progress
+  const py=H-6,pw=W-40,px=20,pt=s?Math.min(engine.elapsed/s.duration,1):0;
+  ctx.fillStyle="#1a2014";ctx.fillRect(px,py,pw,3);ctx.fillStyle="#80a050";ctx.fillRect(px,py,pw*pt,3);
+  ctx.fillStyle="rgba(120,160,80,.3)";ctx.font=`${Math.max(9,W*.018)}px "PingFang SC","Microsoft YaHei",sans-serif`;
+  ctx.textAlign="right";ctx.fillText(s?s.title:"",W-16,H-14)}
+
+function drawShakuhachi(cx,cy,r,fl){
+  // Bamboo body
+  ctx.fillStyle="#4a3a20";ctx.fillRect(cx-r*.3,cy-r*4,r*.6,r*8);
+  // Bamboo segments
+  ctx.strokeStyle="#5a4a30";ctx.lineWidth=1;
+  for(let i=-3;i<=3;i++){const sy=cy+i*r*1.15;ctx.beginPath();ctx.moveTo(cx-r*.35,sy);ctx.lineTo(cx+r*.35,sy);ctx.stroke()}
+  // Blowing edge
+  ctx.fillStyle="#c0a870";ctx.beginPath();ctx.ellipse(cx,cy-r*3.5,r*.4,r*.25,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#806030";ctx.beginPath();ctx.ellipse(cx,cy-r*3.5,r*.4,r*.25,0,0,Math.PI*2);ctx.stroke();
+  // Sound hole
+  for(let i=-2;i<=2;i++){ctx.fillStyle="#302010";ctx.beginPath();ctx.arc(cx+r*.35,cy+i*r*1.15,r*.08,0,Math.PI*2);ctx.fill()}
+  // Flash glow when playing
+  if(fl>.01){const fg=ctx.createRadialGradient(cx,cy-r*3.5,0,cx,cy-r*3.5,r*3);
+    fg.addColorStop(0,`rgba(160,200,100,${fl})`);fg.addColorStop(1,"rgba(160,200,100,0)");
+    ctx.fillStyle=fg;ctx.fillRect(cx-r*3,cy-r*6,r*6,r*10)}
+}
+
+// Init
+function buildSongList(){const c=document.getElementById("song-list");c.innerHTML="";
+  SONGS.forEach(s=>{const b=document.createElement("button");b.className="sb";
+    b.innerHTML=`<div class="sl"><span class="st">${s.title}</span><span class="ss">${s.bpm}BPM · ${Math.round(s.duration)}秒</span></div><div class="sr"><span class="sd">⭐</span><span class="sa">▶</span></div>`;
+    b.onclick=()=>startGame(s.title);c.appendChild(b)})}
+resize();detGl();initRing();initCane();buildSongList();
+setTimeout(()=>{document.getElementById("loading").style.display="none";document.getElementById("start-screen").style.display="flex"},300);
+</script>
+</body>
+</html>

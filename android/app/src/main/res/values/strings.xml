@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">尺八高手</string>
+    <string name="title_activity_main">尺八高手</string>
+    <string name="package_name">com.shakuhachi.master</string>
+    <string name="custom_url_scheme">com.shakuhachi.master</string>
+</resources>
